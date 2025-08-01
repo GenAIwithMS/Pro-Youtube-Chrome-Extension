@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube RAG Chat Premium</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            width: 400px;
+            min-height: 600px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            max-height: 600px;
+        }
+
+        /* Header */
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 16px;
+            border-bottom: 1px solid #e0e0e0;
+            backdrop-filter: blur(10px);
+        }
+
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .header .subtitle {
+            font-size: 12px;
+            color: #666;
+        }
+
+        /* Subscription Status */
+        .subscription-status {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 12px 16px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .plan-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .plan-free {
+            background: #f0f0f0;
+            color: #666;
+        }
+
+        .plan-pro {
+            background: #4a9eff;
+            color: white;
+        }
+
+        .plan-power-plus {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .plan-creator {
+            background: #ffa502;
+            color: white;
+        }
+
+        .upgrade-btn {
+            background: #4a9eff;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .upgrade-btn:hover {
+            background: #357abd;
+        }
+
+        /* Usage Stats */
+        .usage-stats {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 8px 16px;
+            font-size: 11px;
+            color: #666;
+            text-align: center;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        /* Status Bar */
+        .status-bar {
+            padding: 8px 16px;
+            font-size: 12px;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.9);
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .status-bar.info {
+            background: rgba(74, 158, 255, 0.1);
+            color: #4a9eff;
+        }
+
+        .status-bar.processing {
+            background: rgba(255, 193, 7, 0.1);
+            color: #ffc107;
+        }
+
+        .status-bar.error {
+            background: rgba(255, 71, 87, 0.1);
+            color: #ff4757;
+        }
+
+        /* Tab System */
+        .tabs {
+            display: flex;
+            background: rgba(255, 255, 255, 0.9);
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px 8px;
+            text-align: center;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            color: #666;
+            transition: all 0.2s ease;
+        }
+
+        .tab.active {
+            color: #4a9eff;
+            background: rgba(74, 158, 255, 0.1);
+            border-bottom: 2px solid #4a9eff;
+        }
+
+        .tab:hover:not(.active) {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .tab.locked {
+            color: #ccc;
+            cursor: not-allowed;
+            position: relative;
+        }
+
+        .tab.locked::after {
+            content: "🔒";
+            margin-left: 4px;
+        }
+
+        /* Tab Content */
+        .tab-content {
+            display: none;
+            flex: 1;
+            flex-direction: column;
+            background: white;
+        }
+
+        .tab-content.active {
+            display: flex;
+        }
+
+        /* Chat Tab */
+        .messages {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+            max-height: 300px;
+        }
+
+        .message {
+            margin-bottom: 12px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .message.welcome {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .message.user {
+            background: #4a9eff;
+            color: white;
+            margin-left: 20px;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.assistant {
+            background: #f8f9fa;
+            color: #333;
+            margin-right: 20px;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message.system {
+            background: #e3f2fd;
+            color: #1976d2;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .message.error {
+            background: #ffebee;
+            color: #c62828;
+            border-left: 3px solid #f44336;
+        }
+
+        .message.upgrade-prompt {
+            background: linear-gradient(135deg, #ffa502, #ff6348);
+            color: white;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .message.upgrade-prompt:hover {
+            transform: scale(1.02);
+        }
+
+        /* Input Area */
+        .input-area {
+            padding: 16px;
+            background: #f8f9fa;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .premium-controls {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .premium-btn {
+            flex: 1;
+            padding: 6px 8px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: white;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .premium-btn.active {
+            background: #4a9eff;
+            color: white;
+            border-color: #4a9eff;
+        }
+
+        .premium-btn.locked {
+            background: #f5f5f5;
+            color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .premium-btn.locked::after {
+            content: " 🔒";
+        }
+
+        .input-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .message-input {
+            flex: 1;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 13px;
+            resize: none;
+            min-height: 40px;
+            max-height: 80px;
+        }
+
+        .message-input:focus {
+            outline: none;
+            border-color: #4a9eff;
+            box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.2);
+        }
+
+        .send-btn {
+            padding: 10px 16px;
+            background: #4a9eff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.2s ease;
+        }
+
+        .send-btn:hover:not(:disabled) {
+            background: #357abd;
+        }
+
+        .send-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        /* Premium Features */
+        .premium-feature {
+            padding: 16px;
+            margin: 8px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background: white;
+        }
+
+        .premium-feature.locked {
+            background: #f8f9fa;
+            opacity: 0.6;
+        }
+
+        .premium-feature h3 {
+            font-size: 14px;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .premium-feature p {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .feature-btn {
+            background: #4a9eff;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        .feature-btn.locked {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        /* Upgrade Modal */
+        .upgrade-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .upgrade-modal.show {
+            display: flex;
+        }
+
+        .upgrade-content {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            max-width: 350px;
+            width: 90%;
+        }
+
+        .upgrade-content h2 {
+            font-size: 18px;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .plan-option {
+            padding: 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .plan-option:hover {
+            border-color: #4a9eff;
+            background: rgba(74, 158, 255, 0.05);
+        }
+
+        .plan-option.selected {
+            border-color: #4a9eff;
+            background: rgba(74, 158, 255, 0.1);
+        }
+
+        .plan-name {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .plan-price {
+            color: #4a9eff;
+            font-weight: 600;
+        }
+
+        .plan-features {
+            font-size: 11px;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .modal-btn.primary {
+            background: #4a9eff;
+            color: white;
+        }
+
+        .modal-btn.secondary {
+            background: #f0f0f0;
+            color: #666;
+        }
+
+        /* Loading */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 8px;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .loading::after {
+            content: "";
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #4a9eff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 8px;
+        }
+
+        /* Animations */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Suggestions */
+        .suggestions {
+            padding: 8px 16px;
+            background: #f8f9fa;
+            border-top: 1px solid #e0e0e0;
+            display: none;
+        }
+
+        .suggestions.show {
+            display: block;
+        }
+
+        .suggestion-item {
+            padding: 6px 8px;
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            margin-bottom: 4px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .suggestion-item:hover {
+            background: #4a9eff;
+            color: white;
+        }
+
+        .suggestion-item:last-child {
+            margin-bottom: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>YouTube RAG Chat</h1>
+            <div class="subtitle">AI-powered video conversations</div>
+        </div>
+
+        <!-- Subscription Status -->
+        <div class="subscription-status">
+            <div>
+                <span class="plan-badge plan-free" id="planBadge">Free</span>
+                <span id="planDetails">50 chats/day</span>
+            </div>
+            <button class="upgrade-btn" id="upgradeBtn">Upgrade</button>
+        </div>
+
+        <!-- Usage Stats -->
+        <div class="usage-stats" id="usageStats">
+            Chats used today: 0/50
+        </div>
+
+        <!-- Status Bar -->
+        <div class="status-bar info" id="statusBar">
+            Navigate to a YouTube video to get started
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" data-tab="chat">💬 Chat</button>
+            <button class="tab locked" data-tab="voice" id="voiceTab">🎤 Voice</button>
+            <button class="tab locked" data-tab="features" id="featuresTab">⚡ Features</button>
+            <button class="tab locked" data-tab="graph" id="graphTab">🕸️ Graph</button>
+        </div>
+
+        <!-- Chat Tab -->
+        <div class="tab-content active" id="chat-tab">
+            <div class="messages" id="messages">
+                <div class="message welcome">
+                    Welcome to YouTube RAG Chat! 🚀<br>
+                    Process any YouTube video and start asking questions with AI superpowers.
+                </div>
+            </div>
+
+            <div class="suggestions" id="suggestions">
+                <div class="suggestion-item">💡 Summarize the main points</div>
+                <div class="suggestion-item">🔍 What are the key takeaways?</div>
+                <div class="suggestion-item">📊 Explain the most important concepts</div>
+            </div>
+
+            <div class="input-area">
+                <div class="premium-controls">
+                    <button class="premium-btn locked" id="brainModeBtn">🧠 Brain Mode</button>
+                    <button class="premium-btn locked" id="timelineBtn">⏱️ Timeline</button>
+                </div>
+                
+                <div class="input-group">
+                    <textarea 
+                        id="messageInput" 
+                        class="message-input" 
+                        placeholder="Ask about the video..."
+                        disabled
+                    ></textarea>
+                    <button id="sendButton" class="send-btn" disabled>Send</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Voice Tab -->
+        <div class="tab-content" id="voice-tab">
+            <div class="premium-feature">
+                <h3>🎤 Voice Assistant</h3>
+                <p>Talk naturally with your AI assistant using voice input and output.</p>
+                <button class="feature-btn locked">Start Voice Chat</button>
+            </div>
+        </div>
+
+        <!-- Features Tab -->
+        <div class="tab-content" id="features-tab">
+            <div class="premium-feature">
+                <h3>🕸️ Knowledge Graph</h3>
+                <p>Visualize concept relationships and connections in the video.</p>
+                <button class="feature-btn locked">Generate Graph</button>
+            </div>
+            
+            <div class="premium-feature">
+                <h3>🔗 Cross-Video RAG</h3>
+                <p>Ask questions across multiple videos and playlists.</p>
+                <button class="feature-btn locked">Enable Cross-Video</button>
+            </div>
+            
+            <div class="premium-feature">
+                <h3>⚡ Real-Time Explain</h3>
+                <p>Auto-pause for complex content with instant explanations.</p>
+                <button class="feature-btn locked">Activate Auto-Pause</button>
+            </div>
+        </div>
+
+        <!-- Graph Tab -->
+        <div class="tab-content" id="graph-tab">
+            <div class="premium-feature">
+                <h3>📊 Knowledge Visualization</h3>
+                <p>Interactive concept maps and relationship graphs.</p>
+                <div id="graphContainer" style="height: 200px; background: #f8f9fa; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #666;">
+                    Knowledge graph will appear here
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading indicator -->
+        <div class="loading" id="loading">Processing...</div>
+    </div>
+
+    <!-- Upgrade Modal -->
+    <div class="upgrade-modal" id="upgradeModal">
+        <div class="upgrade-content">
+            <h2>🚀 Upgrade to Premium</h2>
+            
+            <div class="plan-option" data-plan="pro">
+                <div class="plan-name">Pro Plan</div>
+                <div class="plan-price">$5/month</div>
+                <div class="plan-features">Brain Mode, Timeline-Aware, Scene Understanding, Voice Assistant</div>
+            </div>
+            
+            <div class="plan-option" data-plan="power_plus">
+                <div class="plan-name">Power+ Plan</div>
+                <div class="plan-price">$15/month</div>
+                <div class="plan-features">All Pro features + Knowledge Graphs, Cross-Video RAG, Real-Time Explain</div>
+            </div>
+            
+            <div class="plan-option" data-plan="creator">
+                <div class="plan-name">Creator Plan</div>
+                <div class="plan-price">$25/month</div>
+                <div class="plan-features">All Power+ features + Question Generator, Comment Analyzer, SEO Tools</div>
+            </div>
+            
+            <div class="modal-buttons">
+                <button class="modal-btn secondary" id="closeModal">Cancel</button>
+                <button class="modal-btn primary" id="startTrial">Start 7-Day Trial</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="marked.min.js"></script>
+    <script src="popup.js"></script>
+</body>
+</html>
+
